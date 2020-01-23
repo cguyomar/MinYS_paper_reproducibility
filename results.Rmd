@@ -1,0 +1,566 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r,echo=T}
+library(reshape2)
+library(ggplot2)
+# library(summarytools)
+library(xtable)
+# library(kableExtra)
+library(knitr)
+opts_chunk$set(echo=FALSE)
+library(ggrepel)
+library(gridExtra)
+library(plyr)
+options(knitr.table.format = "latex")
+```
+
+```{r}
+
+
+# Functions
+
+fact2char = function(df){
+  i <- sapply(df, is.factor)
+  df[i] <- lapply(df[i], as.character)
+  return(df)
+}
+
+addkb <- function(val){
+  if (val > 10000 || is.numeric(val)==F){
+    return(paste0(round(val/1000),"k"))
+  } else { return(val)}
+}
+
+
+mystats_full_kb <- function(vals){
+  med = addkb(median(vals))
+  m = addkb(min(vals))
+  M = addkb(max(vals))
+  return(paste0(med," (",m,"-",M,")"))
+}
+
+mystats_med_kb <- function(vals){
+  med = addkb(median(vals))
+  return(med)
+}
+
+mystats_full_runtime = function(vals){
+  med = round(median(vals,na.rm = T)/3600,digits=2)
+  m = round(min(vals,na.rm=T)/3600,digits = 2)
+  M = round(max(vals,na.rm=T)/3600,digits=2)
+  return(paste0(med," (",m,"-",M,")"))
+}
+
+mystats_med_runtime = function(vals){
+  med = round(median(vals,na.rm = T)/3600,digits=2)
+  return(med)
+}
+
+paste_tabs <- function(tab.list){
+  newtab = data.frame(tab.list)
+  colnames(newtab) = rep(colnames(tab.list[[1]]),times=length(tab.list))
+  rown = which(colnames(newtab)=="Metric" | colnames(newtab)=="Tool")[-c(1,2)]
+  newtab = newtab[,-rown]
+  colnames(newtab) = c(colnames(newtab)[1:2],names(tab.list))
+  return(newtab)
+}
+
+
+make_table <- function(tab,metrics,FUN=median){
+  tools = unique(tab$Method)
+  nbMetrics = length(metrics)
+  nbTools = length(tools)
+
+  #Initialize empty tab
+  dat <- data.frame(
+    Metric = rep(metrics,each=nbTools),
+    Tool = rep(tools,times=nbMetrics)
+  )  
+  
+  col = rep(0,nrow(dat))
+  i = 1
+  for (m in metrics){
+    for (t in tools){
+      print(m)
+      val = FUN(tab[tab$Method==t,m])
+      col[i] = val
+      i = i+1
+    }
+  }
+  dat = data.frame(dat,Value=col)
+  return(dat)
+
+}
+
+
+add_percents = function(tab){
+    tab = apply(tab,2,as.character)
+  tab = cbind(tab[,1],apply(tab[,-1],2,paste0,"\\%"))
+  return(tab)
+}
+
+tab_stats <- function(tab){
+   # % of samples with > 1path (before/after comparison)
+  npaths.before = round(sum(tab$V2==1)/nrow(tab)*100,digits = 2)
+  npaths.after = round(sum(tab$V3==1)/nrow(tab)*100,digits=2)
+  
+  # $ of samples with more than 1 comp
+  ncomps = round(sum(tab$V4==1)/nrow(tab)*100,digits = 2)
+  
+  return(c(ncomps,npaths.before,npaths.after))
+}
+
+
+time2sec = function(string){
+  string = strsplit(string,split = ":")[[1]]
+  string = as.numeric(string)
+  return(string[1]*3600 + string[2]*60 + string[3])
+}
+
+```
+
+
+## Some useful data
+```{r}
+mytheme = theme_bw(base_size = 12)+theme(legend.position = "right")
+
+genome.levels = c("Closest","Incomplete","Distant","Most distant")
+
+pools =  c("Alfalfa","Cast","Clover","Gers","Gs","Gt","Lc","Lus","Mel","MI","Mil","Os","Ov","Pea","Sl","Sv","Vc","Vl")
+individuals = c("ArPo28","ArPo31","ArPo58","L10Lap02","L10Mo01","L10Mo03","L11Vc04","L11Vc05","L14Lap03","L14Os02","L14Os06","L14Os08","L14Sv01","L15Sv08","L15Sv14","L17ML03","L19Cs01","L1Vc01","L3Lc03","L3ML02","L3ML04","L4Lc03","L6Lap03","L6Mo02","L7Lc20","L7Tp01","L7Tp17","L7Tp23","L9Ms03","L9Ms05","L9Ms14","R21Cs02")
+```
+
+## Loading MinYS data
+```{r,echo=T}
+tab.minys = read.table("quast/MinYS/transposed_report.tsv",sep="\t",comment.char = "",header=T,quote = "\"")
+
+tab.minys$Sample = sapply(as.character(tab.minys$Assembly),function(elt){return(strsplit(elt,".",fixed=T)[[1]][1])})
+
+tab.minys$Genome = sapply(as.character(tab.minys$Assembly),function(elt){return(strsplit(elt,".",fixed=T)[[1]][2])})
+tab.minys$Genome = gsub("LSR1",genome.levels[1],tab.minys$Genome)
+tab.minys$Genome = gsub("rearranged",genome.levels[2],tab.minys$Genome)
+tab.minys$Genome = gsub("myzus",genome.levels[3],tab.minys$Genome)
+tab.minys$Genome = gsub("schyzaphis",genome.levels[4],tab.minys$Genome)
+
+tab.minys$Method = "MinYS"
+tab.minys$Type = ifelse(tab.minys$Sample %in% pools,"pool","ind")
+tab.minys = fact2char(tab.minys)
+
+```
+
+## Load MinYs runtimes
+```{r}
+
+runtime.lsr1 = read.table("./results/runtime/runtime.LSR1.tsv",sep=" ")
+runtime.lsr1$Genome =genome.levels[1]
+runtime.myzus = read.table("./results/runtime/runtime.myzus.tsv",sep=" ")
+runtime.myzus$Genome = genome.levels[3]
+runtime.rearranged = read.table("./results/runtime/runtime.rearranged.tsv",sep=" ")
+runtime.rearranged$Genome = genome.levels[2]
+runtime.schyzaphis = read.table("./results/runtime/runtime.schyzaphis.tsv",sep=" ")
+runtime.schyzaphis$Genome = genome.levels[4]
+runtimes = rbind(runtime.lsr1,runtime.myzus,runtime.rearranged,runtime.schyzaphis)
+
+colnames(runtimes) = c("Sample","Mapping","Assembly","Graph creation","Gapfilling with graph loading","Simplification","Gapfilling","NA","Genome")
+runtimes$Simplification = runtimes$Simplification - runtimes$`Gapfilling with graph loading` - runtimes$`Graph creation`
+runtimes$Method = "Full MinYS"
+runtimes$Type = ifelse(runtimes$Sample %in% pools,"pool","ind")
+
+# Add to the minyresultss table
+runtimes$runtime = runtimes$Mapping + runtimes$Assembly + runtimes$`Graph creation` + runtimes$Gapfilling + runtimes$Simplification
+runtimes$Method = "MinYS"
+
+tab.minys = merge(all.x = T,x=tab.minys,y=runtimes[,c("Sample","Genome","Type","runtime","Method")],by = c("Method","Sample","Genome","Type"))
+
+```
+
+
+## Loading Megahit data
+```{r,echo=T}
+tab.megahit <- read.table("quast/Megahit/transposed_report.tsv",sep="\t",comment.char = "",header=T,quote = "\"")
+
+# Adding metadata
+tab.megahit$Sample = sapply(as.character(tab.megahit$Assembly),function(elt){return(strsplit(elt,"_",fixed=T)[[1]][1])})
+
+tab.megahit$Genome = sapply(as.character(tab.megahit$Assembly),function(elt){return(strsplit(elt,".",fixed=T)[[1]][3])})
+tab.megahit$Genome = gsub("LSR1",genome.levels[1],tab.megahit$Genome)
+tab.megahit$Genome = gsub("rearranged",genome.levels[2],tab.megahit$Genome)
+tab.megahit$Genome = gsub("myzus",genome.levels[3],tab.megahit$Genome)
+tab.megahit$Genome = gsub("schyzaphis",genome.levels[4],tab.megahit$Genome)
+
+tab.megahit$Method = "Megahit"
+tab.megahit$Type = ifelse(tab.megahit$Sample %in% pools,"pool","ind")
+
+tab.megahit = fact2char(tab.megahit)
+
+# Add runtime data
+runtime.megahit = read.csv("results/runtime/runtime.megahit.csv",header=F)
+colnames(runtime.megahit) = c("Sample","runtime",NA)
+runtime.megahit$Method = "Megahit"
+
+tab.megahit = merge(all.x = T,x=tab.megahit,y=runtime.megahit[,c("Sample","runtime","Method")],by = c("Method","Sample"))
+
+
+```
+
+## Load Metacompass results
+
+```{r}
+tab.metacompass <- read.table("quast/Metacompass/transposed_report.tsv",sep="\t",comment.char = "",header=T,quote = "\"")
+tab.metacompass$Sample = tab.metacompass$Assembly
+tab.metacompass$Genome = "Distant"
+tab.metacompass$Method = "Metacompass"
+
+tab.metacompass$Type = ifelse(tab.metacompass$Sample %in% pools,"pool","ind")
+tab.metacompass = fact2char(tab.metacompass)
+
+# Add runtime data
+runtime.metacompass.inds = read.table("results/runtime/metacompass.inds.walltime")
+runtime.metacompass.pools = read.table("results/runtime/metacompass.pools.walltime")
+
+# Note : we don't get the sample - runtime correspondance
+tab.metacompass$runtime=NA
+tab.metacompass[tab.metacompass$Type == "ind",]$runtime = na.omit(sapply(as.character(runtime.metacompass.inds$V1),time2sec))
+tab.metacompass[tab.metacompass$Type == "pool",]$runtime = c(NA,sapply(as.character(runtime.metacompass.pools$V1),time2sec))
+
+```
+
+
+
+## Load Minia results
+
+
+```{r}
+tab.minia = read.table("quast/minia/transposed_report.tsv",sep="\t",comment.char = "",header=T,quote = "\"")
+tab.minia$Sample = sapply(as.character(tab.minia$Assembly),function(elt){return(strsplit(elt,".",fixed=T)[[1]][1])})
+
+tab.minia$Genome = sapply(as.character(tab.minia$Assembly),function(elt){return(strsplit(elt,".",fixed=T)[[1]][2])})
+tab.minia$Genome = gsub("LSR1",genome.levels[1],tab.minia$Genome)
+tab.minia$Genome = gsub("rearranged",genome.levels[2],tab.minia$Genome)
+tab.minia$Genome = gsub("myzus",genome.levels[3],tab.minia$Genome)
+tab.minia$Genome = gsub("schyzaphis",genome.levels[4],tab.minia$Genome)
+
+tab.minia$Type = ifelse(tab.minia$Sample %in% pools,"pool","ind")
+tab.minia$Method = "Minia"
+tab.minia = fact2char(tab.minia)
+
+tab.minia$runtime = NA
+
+```
+
+
+## merge all
+```{r}
+tab.all = rbind(tab.minia,tab.minys,tab.megahit,tab.metacompass)
+tab.all$perc_ref = tab.all$Total.length.....0.bp. / 642000*100
+colnames(tab.all)[ncol(tab.all)] = "Length / reference length"
+tab.all$Genome = factor(tab.all$Genome,levels=c("Closest","Incomplete","Distant","Most distant")) # for ordering
+```
+
+
+
+
+
+## Runtime plot
+```{r}
+
+# We aggregate the runtimes Aggregate for plot
+
+# This plot is only for individual samples
+runtimes = runtimes[runtimes$Type == "ind",]
+runtimes = aggregate(runtimes[,2:7],by=list(runtimes$Genome,runtimes$Method),FUN=mean)
+colnames(runtimes)[1:2] = c("Genome","Method")
+
+runtimes$`Gapfilling with graph loading` = 0
+runtimes$Gapfilling = runtimes$Gapfilling + runtimes$'Graph creation'
+runtimes$'Graph creation' = NULL
+
+runtimes = melt(runtimes,variable.name = "Step",value.name = "Time")
+
+runtimes$Step = factor(runtimes$Step, levels=rev(levels(runtimes$Step)))
+runtimes$Genome = factor(runtimes$Genome,levels = genome.levels)
+
+
+# Plot
+runtimes = runtimes[runtimes$Method=="MinYS",]
+runtimes = runtimes[runtimes$Step!="Gapfilling with graph loading",]
+runtimes$Step = factor(runtimes$Step,levels=rev(c("Mapping","Assembly","Gapfilling","Simplification")))
+
+cols = c("Mapping" = "indianred","Assembly" = "indianred4","Gapfilling"="steelblue","Simplification"="steelblue4")
+
+# Simplify steps
+for (g in unique(runtimes$Genome)){
+  runtimes[runtimes$Genome==g & runtimes$Step == "Mapping",]$Time = runtimes[runtimes$Genome==g & runtimes$Step == "Mapping",]$Time + runtimes[runtimes$Genome==g & runtimes$Step == "Assembly",]$Time
+  runtimes[runtimes$Genome==g & runtimes$Step == "Gapfilling",]$Time = runtimes[runtimes$Genome==g & runtimes$Step == "Gapfilling",]$Time + runtimes[runtimes$Genome==g & runtimes$Step == "Simplification",]$Time
+}
+
+runtimes = runtimes[runtimes$Step %in% c("Mapping","Gapfilling"),]
+runtimes$Step = revalue(runtimes$Step, c("Mapping"="Backbone assembly", "Gapfilling"="Gapfilling"))
+
+cols = c("Backbone assembly" = "indianred","Assembly" = "indianred4","Gapfilling"="steelblue","Simplification"="steelblue4")
+
+
+plot.runtime = ggplot(data = runtimes,aes(x=Genome,fill=Step,y=Time / 60))+geom_bar(stat="identity")+
+  scale_fill_manual(values=cols)+
+  ylab("Time (minutes)")+scale_y_continuous(breaks=c((0:9)*30))+
+  mytheme+ggtitle("Runtime")+xlab("Reference genome")
+```
+
+
+
+
+##  Minia / MinYS assembly size plot
+```{r}
+
+tab.tmp = tab.all[tab.all$Method %in% c("MinYS","Minia"),]
+tab.tmp = tab.tmp[tab.tmp$Type == "ind",]
+
+length.tab = aggregate(tab.tmp$perc_ref,by=list(tab.tmp$Genome,tab.tmp$Method),FUN=mean)
+
+colnames(length.tab) = c("Genome","Step","Assembly length / Target length (%)")
+
+length.tab$Step = gsub("Minia","Assembly\nstep",length.tab$Step)
+length.tab$Step = gsub("MinYS","Full\npipeline",length.tab$Step)
+cols = c("Assembly\nstep"="indianred","Full\npipeline"="steelblue")
+
+
+# For stacking
+length.tab[length.tab$Step == "Full\npipeline",]$`Assembly length / Target length (%)` = length.tab[length.tab$Step == "Full\npipeline",]$`Assembly length / Target length (%)` - length.tab[length.tab$Step == "Assembly\nstep",]$`Assembly length / Target length (%)`
+
+length.tab$Step = factor(length.tab$Step,levels=c("Full\npipeline","Assembly\nstep"))
+
+plot.length = ggplot(data=length.tab,aes(x=Genome,y=`Assembly length / Target length (%)`,fill=Step))+
+  geom_bar(stat="identity")+
+  scale_fill_manual(values = cols)+
+  ggtitle("Assembly size")+
+  #scale_y_continuous(breaks=c(0,150e3,300e3,450e3,600e3),labels = c("0","150kb","300kb","450kb","600kb"))+
+  geom_hline(yintercept = 100,linetype="dotted")+mytheme+theme(legend.position = "none")+xlab("Reference genome")
+
+```
+
+
+## XY plot with contig statistics
+```{r}
+ncontigs = aggregate(tab.tmp$X..contigs,by = list(tab.tmp$Genome,tab.tmp$Method),FUN=mean)
+perc_lengths = aggregate(tab.tmp$perc_ref,by = list(tab.tmp$Genome,tab.tmp$Method),FUN=mean)
+
+
+xy.data = data.frame(ncontigs,perc_lengths[,-c(1:2)])
+colnames(xy.data) = c("Genome","Step","ncontigs","length")
+
+xy.data$Step = gsub("Minia","Backbone assembly",xy.data$Step)
+xy.data$Step = gsub("MinYS","Full\npipeline",xy.data$Step)
+
+cols = c("Backbone assembly"="indianred","Full\npipeline"="steelblue")
+
+# Overly complicated stuff to get the arrows coordinates
+xy.data$arrowx = 0
+xy.data$arrowy = 0
+i = 1
+for (g in unique(xy.data$Genome)){
+  print(g)
+  tab.tmp = xy.data[xy.data$Genome == g,]
+
+  xa = log10(tab.tmp$length[1])
+  ya = log10(tab.tmp$ncontigs[1])
+  xb = log10(tab.tmp$length[2])
+  yb = log10(tab.tmp$ncontigs[2])
+  
+  x_offset = 0.02 * abs(xb-xa)
+  y_offset = 0.02 * abs(yb-ya)
+  print(y_offset)
+  
+  if (ya > yb){
+     newxa = 10^(xa+x_offset)
+  newxb = 10^(xb-x_offset)
+  
+  newya = 10^(ya-y_offset)
+  newyb = 10^(yb+y_offset)
+
+  } else {
+  newxa = 10^(xa-x_offset)
+  newxb = 10^(xb+x_offset)
+  
+  newya = 10^(ya+y_offset)
+  newyb = 10^(yb-y_offset)
+
+  }
+ 
+  xy.data[xy.data$Genome == g,]$arrowx = c(newxa,newxb)
+  xy.data[xy.data$Genome == g,]$arrowy = c(newya,newyb)
+
+}
+
+
+
+plotxy = ggplot(data=xy.data,aes(y=ncontigs,x=length,colour=Step,shape = Genome))+
+  #geom_segment(aes(y=ncontigs,x=length,group=Genome),inherit.aes = F)+
+  geom_line(aes(group=Genome,x=arrowx,y=arrowy),inherit.aes = F,arrow = arrow(angle=15,ends="last",type="closed",length = unit(0.3, "cm")),colour="grey")+
+  geom_point(size=3,stroke=1.5)+#geom_text_repel(aes(label=Genome),point.padding = 0.75,min.segment.length=1.5,size = 3,force=1,direction="x")+
+  #scale_x_continuous(limits = c(0,650e3),breaks=c(0,150e3,300e3,450e3,600e3),labels = c("0","150kb","300kb","450kb","600kb
+  coord_cartesian(xlim=c(0,100))+
+  scale_y_log10()+
+  scale_colour_manual(name="Step",values = cols)+scale_fill_manual(values = cols)+
+  scale_shape_discrete(name="Reference genome")+
+  mytheme+
+  ggtitle("Assembly contiguity")+ylab("Number of contigs")+xlab("Assembly length / Target length (%)")
+
+plotxy
+
+
+```
+
+
+## Arrange the 3 plots together
+
+```{r}
+svg(file="./figures/minys_minia.svg",width = 10,height = 6)
+grid.arrange(plot.length,plot.runtime,plotxy,layout_matrix = rbind(c(3,3,3,3,3),c(1,1,2,2,2)))
+dev.off()
+```
+
+
+
+
+
+## Table to compare Megahit and MinYS assembly results
+```{r}
+
+
+metrics = c("Length / reference length","X..contigs","Largest.contig","runtime")
+
+tab.all = tab.all[tab.all$Method != "Minia",]
+tab.all = tab.all[!is.na(tab.all$Genome),]
+tab.distant = tab.all[tab.all$Genome == "Distant",]
+tab.closest = tab.all[tab.all$Genome == "Closest",]
+tab.rearranged = tab.all[tab.all$Genome == "Incomplete",]
+tab.mostdistant = tab.all[tab.all$Genome == "Most distant",]
+
+
+make_tables = function(tab,metrics){
+  tab.list = list()
+  for (m in metrics){
+    print(m)
+    if (m == "runtime"){
+      tab.ag = aggregate(tab[,m],by=list(tab$Method,tab$Type),FUN=mystats_full_runtime)
+    }else {
+      tab.ag = aggregate(tab[,m],by=list(tab$Method,tab$Type),FUN=mystats_full_kb)
+    }
+    
+    tab.ag = dcast(tab.ag,Group.1~Group.2)
+    tab.ag = tab.ag[order(tab.ag$Group.1,decreasing = T),]
+    tab.list = c(tab.list,list(tab.ag))
+  }
+  names(tab.list) = metrics
+  return(tab.list)
+}
+tab.list = make_tables(tab.distant,metrics)
+
+res = data.frame(tab.list)
+res = res[,-c(4,7,10)]
+colnames(res) = c("Tool",rep(c("Individuals","Pools"),times=4))
+
+header = c(1,2,2,2,2)
+names(header) = c("",names(tab.list))
+
+kable(res, booktabs = TRUE, caption = "My  table", escape = FALSE,align = "c",row.names = F) %>%
+  add_header_above(header) %>%
+  #kable_styling(latex_options = "hold_position") %>%
+  # column_spec(c(1), bold=TRUE) %>%
+  collapse_rows(columns = 1)
+
+# Same table withou the min-max
+make_tables = function(tab,metrics){
+  tab.list = list()
+  for (m in metrics){
+    print(m)
+    if (m == "runtime"){
+      tab.ag = aggregate(tab[,m],by=list(tab$Method,tab$Type),FUN=mystats_med_runtime)
+    }else {
+      tab.ag = aggregate(tab[,m],by=list(tab$Method,tab$Type),FUN=mystats_med_kb)
+    }
+    
+    tab.ag = dcast(tab.ag,Group.1~Group.2)
+    tab.ag = tab.ag[order(tab.ag$Group.1,decreasing = T),]
+    tab.list = c(tab.list,list(tab.ag))
+  }
+  names(tab.list) = metrics
+  return(tab.list)
+}
+tab.list = make_tables(tab.all,metrics)
+
+format_tablist = function(tab.list){
+  n = length(tab.list)
+  res = data.frame(tab.list)
+  rem = seq(from=4,by = 3,length.out = n-1)
+  res = res[,-rem]
+  colnames(res) = c("Tool",rep(c("Individuals","Pools"),times=n))
+  header = c(1,rep(2,n))
+  names(header) = c("",names(tab.list))
+  
+  return(list(tab=res,header=header))
+
+}
+
+to_latex = function(res,header){
+  kable(res, booktabs = TRUE, caption = "My  table", escape = FALSE,align = "c",row.names = F) %>%
+  add_header_above(header) #%>%
+  #pack_rows("Group 1", 4, 7)
+  #collapse_rows(columns = 1))
+}
+
+
+header = format_tablist(tab.list)$header
+to_latex(format_tablist(tab.list)$tab,header)
+
+
+
+```
+
+
+
+## Internal MinYS results (Nb of paths...)
+
+
+```{r}
+tab.lsr1 = read.table("results/count_paths/LSR1.pathnb.tsv")
+tab.rearranged = read.table("results/count_paths/rearranged.pathnb.tsv")
+tab.myzus = read.table("results/count_paths/myzus.pathnb.tsv")
+tab.schyzaphis = read.table("results/count_paths/schyzaphis.pathnb.tsv")
+tab.list = list(tab.lsr1,tab.rearranged,tab.myzus,tab.schyzaphis)
+names(tab.list) = genome.levels
+
+
+
+res.inds = res.pools = data.frame(metric=c("Seembly in a single connected component","Assembly in a single path (before comparison)","Assembly in a single path (after comparison)"),stringsAsFactors = F)
+for (i in 1:length(tab.list)){
+  tab = tab.list[[i]]
+  tab.pools = tab[tab$V1 %in% pools,]
+  tab.inds = tab[tab$V1 %in% individuals,]
+  genome = names(tab.list)[i]
+
+  res.pools =cbind(res.pools,tab_stats(tab.pools))
+  res.inds =cbind(res.inds,tab_stats(tab.inds))
+  colnames(res.pools)[ncol(res.pools)] = colnames(res.inds)[ncol(res.inds)] = genome
+}
+
+
+
+
+
+res.pools = add_percents(res.pools)
+res.inds = add_percents(res.inds)
+
+
+res.all = rbind(res.inds,res.pools)
+
+kable(res.all, booktabs = TRUE, caption = "My  table", escape = FALSE,align = "c",format="latex") %>%
+  add_header_above(c(" ","Individual samples"=4)) %>%
+  kable_styling(latex_options = "hold_position") %>%
+  column_spec(c(1), bold=TRUE)
+
+
+```
