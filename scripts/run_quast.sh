@@ -21,10 +21,25 @@ for sampleDir in $(find $resDir -maxdepth 1 -type d)
   mv $sampleDir/tmp.fa $sampleDir/assembly.fa
 done
 
-quast.py $resDir/*/assembly.fa -R $rootDir/data/reference_genomes/LSR1.fa
+quast.py $resDir/*/assembly.fa -R $rootDir/data/reference_genomes/LSR1.fa -o $rootDir/quast/MinYS
 
 ## Assembly part of MinYS (minia)
-quast.py -R $rootDir/data/reference_genomes/LSR1.fa $resDir/*/assembly/*filtered*.fa
+resDir=$rootDir/results/MinYS
+
+# We need to rename assembly files so we can recognize sample and genome names in the quast output
+while read line
+  do for genome in LSR1 myzus rearranged schyzaphis
+      do cp $resDir/$line.$genome.61_10_400_51_5/assembly/minia_k61_abundancemin_10_filtered_400.fa $resDir/$line.$genome.61_10_400_51_5/assembly/$line.$genome.minia.fa
+  done
+done < $rootDir/data/individuals.list
+# Same for the pooles
+while read line
+  do for genome in LSR1 myzus rearranged schyzaphis
+      do cp $resDir/$line.$genome.81_20_400_71_10/assembly/minia_k81_abundancemin_20_filtered_400.fa $resDir/$line.$genome.81_20_400_71_10/assembly/$line.$genome.minia.fa
+  done
+done < $rootDir/data/pools.list
+
+quast.py -R $rootDir/data/reference_genomes/LSR1.fa $resDir/*/assembly/*minia.fa -o $rootDir/quast/minia
 
 
 ## Megahit
@@ -37,4 +52,4 @@ quast.py -R $rootDir/data/reference_genomes/LSR1.fa $resDir/*/contigs.noplasmid.
 
 resDir=$rootDir/results/Metacompass
 
-quast.py -R $rootDir/data/reference_genomes/LSR1.fa $resDir/metacompass.myzus.*/metacompass_output/metacompass.myzus.fa -o $rootDir/quast/Myzus
+quast.py -R $rootDir/data/reference_genomes/LSR1.fa $resDir/metacompass.myzus.*/metacompass_output/metacompass.myzus.fa -o $rootDir/quast/Metacompass

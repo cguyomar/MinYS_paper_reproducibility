@@ -6,9 +6,9 @@ output:
 ```{r,echo=T}
 library(reshape2)
 library(ggplot2)
-# library(summarytools)
+library(summarytools)
 library(xtable)
-# library(kableExtra)
+library(kableExtra)
 library(knitr)
 opts_chunk$set(echo=FALSE)
 library(ggrepel)
