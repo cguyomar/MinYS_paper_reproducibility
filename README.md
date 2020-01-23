@@ -31,13 +31,28 @@ The experiments described in the paper were performed using the development vers
 
 ### MinYS
 
-All the MinYS jobs can be run by executing submit_all_minys.sh
-The script will read files of files in data/files_of_files, evaluate wether it is a pool or individual sequencing, and submit 4 MinYS jobs (for the 4 reference genomes)
+All the MinYS jobs can be run by executing:
+
+```
+./scripts/MinYS/submit_all_minys.sh
+```
+
+The script will: 
+
+* read files of files in `data/files_of_files/`, 
+* evaluate wether it is a pool or individual sequencing, 
+* and submit 4 MinYS jobs (for the 4 reference genomes)
 
 #### Post-analysis
 
-For comparison with other approaches, the output of MinYS was further analyzed. This notably includes the enumeration of comparison of paths within the gfa, as described in the paper.
-This can be run using `post_analysis.sh`
+For comparison with other approaches, the output of MinYS was further analyzed. This notably includes the enumeration and comparison of genomic paths within the gfa, as described in the paper.
+This can be run using:
+
+```
+./scripts/MinYS/post_analysis.sh
+```
+
+
 
 ### Metacompass
 
