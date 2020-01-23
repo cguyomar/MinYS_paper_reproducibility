@@ -24,6 +24,8 @@ done
 quast.py $resDir/*/assembly.fa -R $rootDir/data/reference_genomes/LSR1.fa
 
 ## Assembly part of MinYS (minia)
+quast.py -R $rootDir/data/reference_genomes/LSR1.fa $resDir/*/assembly/*filtered*.fa
+
 
 ## Megahit
 resDir=$rootDir/results/MegaHit/

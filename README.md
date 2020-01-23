@@ -5,7 +5,6 @@ Intended to run analyses on the Genouest cluster, can be adapted to other HPC sy
 ## Todo :
 - new release of MinYS for conda
 - update some paths in the script
-- Add commands for quast
 - Add notebook for the figure
 - Add deletions generation/experiments
 
