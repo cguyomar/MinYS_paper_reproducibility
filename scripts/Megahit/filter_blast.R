@@ -4,7 +4,9 @@
 # Select contigs with more than 50% blast coverage
 # Output subset of the assembly with selected contigs
 
-# Args : blast file, assembly file, outfile
+# Args : blast file, assembly file, outfile, (contigs_list)
+
+# contigs_list : optionnal argument with contig names to keep (used for Metacompass output filtering)
 
 library(GenomicRanges)
 argv <- commandArgs(TRUE)
@@ -15,8 +17,14 @@ blast.file = argv[1]
 assembly.file = argv[2]
 outfile = argv[3]
 
+contigs.keep = c()
+if (length(argv)==4){
+  contigs.keep = read.table(argv[4],stringsAsFactors=F)[,1]
+}
+
 select_contigs = function(blast_file){
   tab <- read.table(blast.file)
+
   contig.length <- aggregate(tab$V4,by=list(tab$V1),unique)
 
   blast=GRanges(tab$V1,IRanges(start=apply(tab[,6:7],1,min),end=apply(tab[,6:7],1,max)))
@@ -28,7 +36,6 @@ select_contigs = function(blast_file){
   aln.length <- aggregate(aln.length$length,by=list(aln.length$contig),FUN=sum)
 
   res <- merge(contig.length,aln.length,by=1)
-
   return(as.character(res[res[,3]/res[,2]>cov.thr,1]))
 }
 
@@ -66,4 +73,7 @@ filter_assembly = function(fasta.file,to.keep,outfile) {
 }
 
 hit.contigs = select_contigs(blast.file)
+print(length(hit.contigs))
+hit.contigs = unique(c(hit.contigs,contigs.keep))
+print(hit.contigs)
 filter_assembly(assembly.file,hit.contigs,outfile)
