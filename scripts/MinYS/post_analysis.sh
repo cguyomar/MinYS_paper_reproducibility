@@ -10,8 +10,7 @@ source /local/env/envconda.sh
 conda activate ~/conda/env_minys
 
 rootDir="/scratch/cguyomar/MinYS_paper"
-minysDir="/home/genouest/genscale/cguyomar/conda/env_minys/bin/"  # Should be changed when all scripts are in $PATH for the conda env
-bandageBin="~/bin/Bandage"  # Should Bandage by in the conda env?
+bandageBin="~/bin/Bandage"  # Location of bandage bin if figures are wanted
 
 # Initializing variables
 scriptDir=$rootDir/scripts/MinYS
@@ -22,9 +21,7 @@ fofDir=$dataDir/files_of_files
 poolList=$dataDir/pools.list
 indList=$dataDir/individuals.list
 
-
 runBandage=false
-
 
 resDir=$rootDir/results/MinYS
 
@@ -45,8 +42,8 @@ for ref in LSR1 rearranged schyzaphis myzus
     fi
 
     # removing small components
-    python $minysDir/graph_simplification/filter_components.py $gfaPrefix.simplified.gfa $gfaPrefix.filtered.gfa 12000
-    python $minysDir/graph_simplification/gfa2fasta.py $gfaPrefix.filtered.gfa $gfaPrefix.filtered.fa 500
+    python filter_components.py $gfaPrefix.simplified.gfa $gfaPrefix.filtered.gfa 12000
+    python gfa2fasta.py $gfaPrefix.filtered.gfa $gfaPrefix.filtered.fa 500
     # We change the contig names because quast fails when they are too long
   	awk '/^>/{print ">contig" ++i; next}{print}' < $gfaPrefix.filtered.fa > $gfaPrefix.filtered.tmp && mv $gfaPrefix.filtered.tmp $gfaPrefix.filtered.fa
 

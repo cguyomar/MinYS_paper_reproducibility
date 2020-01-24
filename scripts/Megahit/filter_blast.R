@@ -73,7 +73,5 @@ filter_assembly = function(fasta.file,to.keep,outfile) {
 }
 
 hit.contigs = select_contigs(blast.file)
-print(length(hit.contigs))
 hit.contigs = unique(c(hit.contigs,contigs.keep))
-print(hit.contigs)
 filter_assembly(assembly.file,hit.contigs,outfile)
