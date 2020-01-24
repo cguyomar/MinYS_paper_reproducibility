@@ -1,32 +1,33 @@
 # Documentation to reproduce experiments of the MinYS paper
 
-The scripts are intended to be run on the (GenOuest computing cluster)[https://www.genouest.org/], they can easily be adapted to other HPC systems.
+[MinYS: Mine Your Symbiont by targeted genome assembly in symbiotic communities](https://www.biorxiv.org/content/10.1101/2019.12.13.875021v1) 
+Guyomar C, Delage W, Legeai F, Mougel C, Simon JC, Lemaitre C 
+BioRxiv **2019**, [doi:10.1101/2019.12.13.875021](https://www.biorxiv.org/content/10.1101/2019.12.13.875021v1)
 
-## Todo :
-- update some paths in the script
+Note: the scripts are intended to be run on the [GenOuest computing cluster](https://www.genouest.org/), they can easily be adapted to other HPC systems.
 
 
 ## Initialization
 
 Cloning this repository will generate a suitable directory structure :
-- `./data` contains reference genomes, and paths to dataset on the GenOuest cluster (SRA identifiers available in *Guyomar et al. 2019*)
+- `./data` contains reference genomes, and paths to the datasets on the GenOuest cluster. (see [data/README.md](data/README.md))
 - `./scripts` contrains the scripts to run the analyses. Some editing may be required to adapt to your environment.
 - By default, results will be stored in `./results`
 
-When not used on the GenOuest cluster, pea aphid sequencing data must be downloaded from SRA and fof files have to be updated with the resulting file paths. All SRA identifiers are given in the file (data/sra_identifiers.tsv)[data/data/sra_identifiers.tsv].
+When not used on the GenOuest cluster, pea aphid sequencing data must be downloaded from SRA and fof files have to be updated with the resulting file paths. All SRA identifiers are given in the file [data/sra_identifiers.tsv](data/data/sra_identifiers.tsv).
 
 ## Environment set-up
 
 - MinYS :
 ```
-conda install -c bioconda minys=???
+conda install -c bioconda minys=1.1
 ```
 - Megahit :
 ```
 conda install -c bioconda megahit=1.1.2
 ```
 - Metacompass :
-Metacompass is not available as a conda environment. Please follow the (documentation)[https://github.com/marbl/MetaCompass/blob/master/README.md].
+Metacompass is not available as a conda environment. Please follow the [documentation](https://github.com/marbl/MetaCompass/blob/master/README.md).
 The experiments described in the paper were performed using the development version at commit `3d187c64324034b7d579e6b6cfe1b366ad94e7a6` (9/04/2019)
 
 ## Targetted assembly jobs
@@ -77,3 +78,9 @@ For comparison with other approaches, the output of MinYS was further analyzed. 
 ## Result analyses
 
 ## Paper figure generation
+
+## Strain coexistence result
+
+In the paper, we demonstrated the ability of MinYS to recover structural variants coexisting in a metagenomic sample. To do so a synthetic dataset was produced in which simulated reads from a rearranged *B. aphidicola* genome were added to a real pea aphid re-sequencing sample, simulating the coexistence in a metagenomic dataset of two strains with structural variations (here 20 deletions with size between 300 bp and 20 Kb). 
+
+The whole protocol is described in [../scripts/strain_coexistence.md](../scripts/strain_coexistence.md).
