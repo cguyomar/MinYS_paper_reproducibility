@@ -21,7 +21,7 @@ for sampleDir in $(find $resDir -maxdepth 1 -type d)
   mv $sampleDir/tmp.fa $sampleDir/assembly.fa
 done
 
-quast.py $resDir/*/assembly.fa -R $rootDir/data/reference_genomes/LSR1.fa -o $rootDir/quast/MinYS
+quast.py $resDir/*/assembly.fa -R $rootDir/data/reference_genomes/LSR1.fa -o $rootDir/results/quast/MinYS
 
 ## Assembly part of MinYS (minia)
 resDir=$rootDir/results/MinYS
@@ -39,17 +39,17 @@ while read line
   done
 done < $rootDir/data/pools.list
 
-quast.py -R $rootDir/data/reference_genomes/LSR1.fa $resDir/*/assembly/*minia.fa -o $rootDir/quast/minia
+quast.py -R $rootDir/data/reference_genomes/LSR1.fa $resDir/*/assembly/*minia.fa -o $rootDir/results/quast/minia
 
 
 ## Megahit
 resDir=$rootDir/results/MegaHit/
 
-quast.py -R $rootDir/data/reference_genomes/LSR1.fa $resDir/*/contigs.noplasmid.myzus.fa -o $rootDir/quast/Megahit
+quast.py -R $rootDir/data/reference_genomes/LSR1.fa $resDir/*/contigs.noplasmid.myzus.fa -o $rootDir/results/quast/Megahit
 
 
 ## Metacompass
 
 resDir=$rootDir/results/Metacompass
 
-quast.py -R $rootDir/data/reference_genomes/LSR1.fa $resDir/metacompass.myzus.*/metacompass_output/metacompass.myzus.fa -o $rootDir/quast/Metacompass
+quast.py -R $rootDir/data/reference_genomes/LSR1.fa $resDir/metacompass.myzus.*/metacompass_output/metacompass.myzus.fa -o $rootDir/results/quast/Metacompass
