@@ -12,23 +12,33 @@ Note: the scripts are intended to be run on the [GenOuest computing cluster](htt
 Cloning this repository will generate a suitable directory structure :
 - `./data` contains reference genomes, and paths to the datasets on the GenOuest cluster. (see [data/README.md](data/README.md))
 - `./scripts` contrains the scripts to run the analyses. Some editing may be required to adapt to your environment.
-- By default, results will be stored in `./results`
+- By default, results will be stored in `./results`. Note that this folder already contains the results shown in the paper, in case one wants only to reproduce the figures or tables ithout running all the experiments (see [results/README.md](results/README.md)).
 
 When not used on the GenOuest cluster, pea aphid sequencing data must be downloaded from SRA and fof files have to be updated with the resulting file paths. All SRA identifiers are given in the file [data/sra_identifiers.tsv](data/data/sra_identifiers.tsv).
 
 ## Environment set-up
 
 - MinYS :
-```
-conda install -c bioconda minys=1.1
-```
+
+  ```
+  conda install -c bioconda minys=1.1
+  ```
 - Megahit :
-```
-conda install -c bioconda megahit=1.1.2
-```
+
+  ```
+  conda install -c bioconda megahit=1.1.2
+  ```
 - Metacompass :
-Metacompass is not available as a conda environment. Please follow the [documentation](https://github.com/marbl/MetaCompass/blob/master/README.md).
-The experiments described in the paper were performed using the development version at commit `3d187c64324034b7d579e6b6cfe1b366ad94e7a6` (9/04/2019)
+  Metacompass is not available as a conda environment. Please follow the [documentation](https://github.com/marbl/MetaCompass/blob/master/README.md).
+  The experiments described in the paper were performed using the development version at commit `3d187c64324034b7d579e6b6cfe1b366ad94e7a6` (9/04/2019)
+
+- Quast (assembly evaluation) :
+
+  ```
+  conda install -c bioconda conda=5.0.2
+  ```
+
+  
 
 ## Targetted assembly jobs
 
@@ -75,9 +85,20 @@ For comparison with other approaches, the output of MinYS was further analyzed. 
 ```
 
 
+
 ## Result analyses
 
-## Paper figure generation
+To evaluate all obtained targetted assemblies, the first step is to run quast on all assembly runs: 
+
+```
+./scripts/run_quast.sh
+```
+
+
+
+## Paper table and figure generations
+
+Tables and Figure 2 of the paper can be reproduced using R, as described in  
 
 ## Strain coexistence result
 
