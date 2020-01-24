@@ -7,6 +7,7 @@ BioRxiv **2019**, [doi:10.1101/2019.12.13.875021](https://www.biorxiv.org/conten
 Note: the scripts are intended to be run on the [GenOuest computing cluster](https://www.genouest.org/), they can easily be adapted to other HPC systems.
 
 
+
 ## Initialization
 
 Cloning this repository will generate a suitable directory structure :
@@ -15,6 +16,8 @@ Cloning this repository will generate a suitable directory structure :
 - By default, results will be stored in `./results`. Note that this folder already contains the results shown in the paper, in case one wants only to reproduce the figures or tables ithout running all the experiments (see [results/README.md](results/README.md)).
 
 When not used on the GenOuest cluster, pea aphid sequencing data must be downloaded from SRA and fof files have to be updated with the resulting file paths. All SRA identifiers are given in the file [data/sra_identifiers.tsv](data/data/sra_identifiers.tsv).
+
+
 
 ## Environment set-up
 
@@ -98,10 +101,12 @@ To evaluate all obtained targetted assemblies, the first step is to run quast on
 
 ## Paper table and figure generations
 
-Tables and Figure 2 of the paper can be reproduced using R, as described in  
+Tables and Figure 2 of the paper can be reproduced using R, as described in [tables_and_figures.Rmd](tables_and_figures.Rmd)
+
+
 
 ## Strain coexistence result
 
 In the paper, we demonstrated the ability of MinYS to recover structural variants coexisting in a metagenomic sample. To do so a synthetic dataset was produced in which simulated reads from a rearranged *B. aphidicola* genome were added to a real pea aphid re-sequencing sample, simulating the coexistence in a metagenomic dataset of two strains with structural variations (here 20 deletions with size between 300 bp and 20 Kb). 
 
-The whole protocol is described in [../scripts/strain_coexistence.md](../scripts/strain_coexistence.md).
+The whole protocol is described in [scripts/strain_coexistence.md](scripts/strain_coexistence.md).
