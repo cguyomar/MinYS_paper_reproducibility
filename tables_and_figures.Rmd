@@ -135,7 +135,7 @@ individuals = c("ArPo28","ArPo31","ArPo58","L10Lap02","L10Mo01","L10Mo03","L11Vc
 
 ## Loading MinYS data
 ```{r,echo=T}
-tab.minys = read.table("quast/MinYS/transposed_report.tsv",sep="\t",comment.char = "",header=T,quote = "\"")
+tab.minys = read.table("results/quast/MinYS/transposed_report.tsv",sep="\t",comment.char = "",header=T,quote = "\"")
 
 tab.minys$Sample = sapply(as.character(tab.minys$Assembly),function(elt){return(strsplit(elt,".",fixed=T)[[1]][1])})
 
@@ -180,7 +180,7 @@ tab.minys = merge(all.x = T,x=tab.minys,y=runtimes[,c("Sample","Genome","Type","
 
 ## Loading Megahit data
 ```{r,echo=T}
-tab.megahit <- read.table("quast/Megahit/transposed_report.tsv",sep="\t",comment.char = "",header=T,quote = "\"")
+tab.megahit <- read.table("results/quast/Megahit/transposed_report.tsv",sep="\t",comment.char = "",header=T,quote = "\"")
 
 # Adding metadata
 tab.megahit$Sample = sapply(as.character(tab.megahit$Assembly),function(elt){return(strsplit(elt,"_",fixed=T)[[1]][1])})
@@ -209,7 +209,7 @@ tab.megahit = merge(all.x = T,x=tab.megahit,y=runtime.megahit[,c("Sample","runti
 ## Load Metacompass results
 
 ```{r}
-tab.metacompass <- read.table("quast/Metacompass/transposed_report.tsv",sep="\t",comment.char = "",header=T,quote = "\"")
+tab.metacompass <- read.table("results/quast/Metacompass/transposed_report.tsv",sep="\t",comment.char = "",header=T,quote = "\"")
 tab.metacompass$Sample = tab.metacompass$Assembly
 tab.metacompass$Genome = "Distant"
 tab.metacompass$Method = "Metacompass"
@@ -234,7 +234,7 @@ tab.metacompass[tab.metacompass$Type == "pool",]$runtime = c(NA,sapply(as.charac
 
 
 ```{r}
-tab.minia = read.table("quast/minia/transposed_report.tsv",sep="\t",comment.char = "",header=T,quote = "\"")
+tab.minia = read.table("results/quast/minia/transposed_report.tsv",sep="\t",comment.char = "",header=T,quote = "\"")
 tab.minia$Sample = sapply(as.character(tab.minia$Assembly),function(elt){return(strsplit(elt,".",fixed=T)[[1]][1])})
 
 tab.minia$Genome = sapply(as.character(tab.minia$Assembly),function(elt){return(strsplit(elt,".",fixed=T)[[1]][2])})
@@ -318,7 +318,7 @@ plot.runtime = ggplot(data = runtimes,aes(x=Genome,fill=Step,y=Time / 60))+geom_
 tab.tmp = tab.all[tab.all$Method %in% c("MinYS","Minia"),]
 tab.tmp = tab.tmp[tab.tmp$Type == "ind",]
 
-length.tab = aggregate(tab.tmp$perc_ref,by=list(tab.tmp$Genome,tab.tmp$Method),FUN=mean)
+length.tab = aggregate(tab.tmp$`Length / reference length`,by=list(tab.tmp$Genome,tab.tmp$Method),FUN=mean)
 
 colnames(length.tab) = c("Genome","Step","Assembly length / Target length (%)")
 
@@ -345,7 +345,7 @@ plot.length = ggplot(data=length.tab,aes(x=Genome,y=`Assembly length / Target le
 ## XY plot with contig statistics
 ```{r}
 ncontigs = aggregate(tab.tmp$X..contigs,by = list(tab.tmp$Genome,tab.tmp$Method),FUN=mean)
-perc_lengths = aggregate(tab.tmp$perc_ref,by = list(tab.tmp$Genome,tab.tmp$Method),FUN=mean)
+perc_lengths = aggregate(tab.tmp$`Length / reference length`,by = list(tab.tmp$Genome,tab.tmp$Method),FUN=mean)
 
 
 xy.data = data.frame(ncontigs,perc_lengths[,-c(1:2)])
