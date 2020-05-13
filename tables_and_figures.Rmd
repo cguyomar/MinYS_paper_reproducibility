@@ -206,6 +206,31 @@ tab.megahit = merge(all.x = T,x=tab.megahit,y=runtime.megahit[,c("Sample","runti
 
 ```
 
+
+## Loading NOVOPlasty data
+```{r,echo=T}
+tab.novoplasty <- read.table("results/quast/NOVOPlasty/transposed_report.tsv",sep="\t",comment.char = "",header=T,quote = "\"")
+
+# Adding metadata
+tab.novoplasty$Sample = sapply(as.character(tab.novoplasty$Assembly),function(elt){return(strsplit(elt,".",fixed=T)[[1]][1])})
+
+tab.novoplasty$Genome = sapply(as.character(tab.novoplasty$Assembly),function(elt){return(strsplit(elt,".",fixed=T)[[1]][2])})
+# tab.novoplasty$Genome = gsub("LSR1",genome.levels[1],tab.novoplasty$Genome)
+# tab.novoplasty$Genome = gsub("rearranged",genome.levels[2],tab.novoplasty$Genome)
+tab.novoplasty$Genome = gsub("myzus",genome.levels[3],tab.novoplasty$Genome)
+# tab.novoplasty$Genome = gsub("schyzaphis",genome.levels[4],tab.novoplasty$Genome)
+
+tab.novoplasty$Method = "NOVOPlasty"
+tab.novoplasty$Type = ifelse(tab.novoplasty$Sample %in% pools,"pool","ind")
+
+tab.novoplasty = fact2char(tab.novoplasty)
+
+
+
+
+```
+
+
 ## Load Metacompass results
 
 ```{r}
