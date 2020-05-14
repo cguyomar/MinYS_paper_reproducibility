@@ -14,6 +14,7 @@ opts_chunk$set(echo=FALSE)
 library(ggrepel)
 library(gridExtra)
 library(plyr)
+library(lubridate)
 options(knitr.table.format = "latex")
 ```
 
@@ -39,6 +40,13 @@ mystats_full_kb <- function(vals){
   med = addkb(median(vals))
   m = addkb(min(vals))
   M = addkb(max(vals))
+  return(paste0(med," (",m,"-",M,")"))
+}
+
+mystats_full_cov <- function(vals){
+  med = round(median(vals))
+  m = round(min(vals))
+  M = round(max(vals))
   return(paste0(med," (",m,"-",M,")"))
 }
 
@@ -175,6 +183,21 @@ runtimes$Method = "MinYS"
 
 tab.minys = merge(all.x = T,x=tab.minys,y=runtimes[,c("Sample","Genome","Type","runtime","Method")],by = c("Method","Sample","Genome","Type"))
 
+# tab.minys$`Memory Usage` = NA
+
+
+# Add MinYS memory usage
+minys.usage = read.csv("results/runtime/MinYS.myzus.time_memory.tsv",header=F,sep="\t",stringsAsFactors = F)
+colnames(minys.usage) = c("Sample","runtime","Memory Usage")
+minys.usage$Sample = sapply(minys.usage$Sample,function(elt){return(strsplit(elt,".",fixed=T)[[1]][1])})
+minys.usage$Method = "MinYS"
+minys.usage$Method = "MinYS"
+minys.usage$Genome = "Distant"
+minys.usage$runtime=NULL
+# novoplasty.usage$runtime = ifelse(grepl(":.*:",novoplasty.usage$runtime),as.numeric(hms(novoplasty.usage$runtime)),as.numeric(ms(novoplasty.usage$runtime)))
+tab.minys = merge(all.x = T,x=tab.minys,y=minys.usage,by = c("Sample","Method","Genome"))
+
+
 ```
 
 
@@ -203,13 +226,14 @@ runtime.megahit$Method = "Megahit"
 
 tab.megahit = merge(all.x = T,x=tab.megahit,y=runtime.megahit[,c("Sample","runtime","Method")],by = c("Method","Sample"))
 
+tab.megahit$`Memory Usage` = NA
 
 ```
 
 
 ## Loading NOVOPlasty data
 ```{r,echo=T}
-tab.novoplasty <- read.table("results/quast/NOVOPlasty/transposed_report.tsv",sep="\t",comment.char = "",header=T,quote = "\"")
+tab.novoplasty <- read.table("results/quast/NOVOPlasty/transposed_report.tsv",sep="\t",comment.char = "",header=T,quote = "\"",stringsAsFactors = F)
 
 # Adding metadata
 tab.novoplasty$Sample = sapply(as.character(tab.novoplasty$Assembly),function(elt){return(strsplit(elt,".",fixed=T)[[1]][1])})
@@ -225,8 +249,13 @@ tab.novoplasty$Type = ifelse(tab.novoplasty$Sample %in% pools,"pool","ind")
 
 tab.novoplasty = fact2char(tab.novoplasty)
 
-
-
+# Add runtime and memory usage
+novoplasty.usage = read.csv("results/runtime/NOVOPlasty.myzus.time_memory.tsv",header=F,sep="\t",stringsAsFactors = F)
+colnames(novoplasty.usage) = c("Sample","runtime","Memory Usage")
+novoplasty.usage$Sample = sapply(novoplasty.usage$Sample,function(elt){return(strsplit(elt,".",fixed=T)[[1]][1])})
+novoplasty.usage$Method = "NOVOPlasty"
+novoplasty.usage$runtime = ifelse(grepl(":.*:",novoplasty.usage$runtime),as.numeric(hms(novoplasty.usage$runtime)),as.numeric(ms(novoplasty.usage$runtime)))
+tab.novoplasty = merge(all.x = T,x=tab.novoplasty,y=novoplasty.usage,by = c("Sample","Method"))
 
 ```
 
@@ -251,6 +280,7 @@ tab.metacompass$runtime=NA
 tab.metacompass[tab.metacompass$Type == "ind",]$runtime = na.omit(sapply(as.character(runtime.metacompass.inds$V1),time2sec))
 tab.metacompass[tab.metacompass$Type == "pool",]$runtime = c(NA,sapply(as.character(runtime.metacompass.pools$V1),time2sec))
 
+tab.metacompass$`Memory Usage` = NA
 ```
 
 
@@ -273,13 +303,14 @@ tab.minia$Method = "Minia"
 tab.minia = fact2char(tab.minia)
 
 tab.minia$runtime = NA
+tab.minia$`Memory Usage` = NA
 
 ```
 
 
 ## merge all
 ```{r}
-tab.all = rbind(tab.minia,tab.minys,tab.megahit,tab.metacompass)
+tab.all = rbind(tab.minia,tab.minys,tab.megahit,tab.metacompass,tab.novoplasty)
 tab.all$perc_ref = tab.all$Total.length.....0.bp. / 642000*100
 colnames(tab.all)[ncol(tab.all)] = "Length / reference length"
 tab.all$Genome = factor(tab.all$Genome,levels=c("Closest","Incomplete","Distant","Most distant")) # for ordering
@@ -451,11 +482,11 @@ dev.off()
 
 
 
-## Table to compare Megahit and MinYS assembly results
+## Table to compare Megahit, NOVOplasty and MinYS assembly results
 ```{r}
 
 
-metrics = c("Length / reference length","X..contigs","Largest.contig","runtime")
+metrics = c("Length / reference length","X..contigs","Largest.contig","runtime","Memory Usage")
 
 tab.all = tab.all[tab.all$Method != "Minia",]
 tab.all = tab.all[!is.na(tab.all$Genome),]
@@ -471,7 +502,11 @@ make_tables = function(tab,metrics){
     print(m)
     if (m == "runtime"){
       tab.ag = aggregate(tab[,m],by=list(tab$Method,tab$Type),FUN=mystats_full_runtime)
-    }else {
+    } else if (m=="Memory Usage"){
+      tab.ag = aggregate(tab[,m],by=list(tab$Method,tab$Type),FUN=mean)
+    } else if (m=="Length / reference length"){
+      tab.ag = aggregate(tab[,m],by=list(tab$Method,tab$Type),FUN=mystats_full_cov)
+    } else {
       tab.ag = aggregate(tab[,m],by=list(tab$Method,tab$Type),FUN=mystats_full_kb)
     }
     
@@ -497,14 +532,16 @@ kable(res, booktabs = TRUE, caption = "My  table", escape = FALSE,align = "c",ro
   # column_spec(c(1), bold=TRUE) %>%
   collapse_rows(columns = 1)
 
-# Same table withou the min-max
+# Same table without the min-max
 make_tables = function(tab,metrics){
   tab.list = list()
   for (m in metrics){
     print(m)
     if (m == "runtime"){
       tab.ag = aggregate(tab[,m],by=list(tab$Method,tab$Type),FUN=mystats_med_runtime)
-    }else {
+    } else if (m=="Length / reference length"){
+      tab.ag = aggregate(tab[,m],by=list(tab$Method,tab$Type),FUN=function(vec){return(round(median(vec)))})
+    }  else {
       tab.ag = aggregate(tab[,m],by=list(tab$Method,tab$Type),FUN=mystats_med_kb)
     }
     
@@ -515,7 +552,7 @@ make_tables = function(tab,metrics){
   names(tab.list) = metrics
   return(tab.list)
 }
-tab.list = make_tables(tab.all,metrics)
+tab.list = make_tables(tab.distant,metrics)
 
 format_tablist = function(tab.list){
   n = length(tab.list)
@@ -571,10 +608,6 @@ for (i in 1:length(tab.list)){
   res.inds =cbind(res.inds,tab_stats(tab.inds))
   colnames(res.pools)[ncol(res.pools)] = colnames(res.inds)[ncol(res.inds)] = genome
 }
-
-
-
-
 
 res.pools = add_percents(res.pools)
 res.inds = add_percents(res.inds)
