@@ -21,7 +21,7 @@ for ref in LSR1 rearranged schyzaphis myzus
     if [[ $sampleName =~ $(echo ^\($(paste -sd'|' $poolList)\)$) ]]; then
         sbatch $scriptDir/run_minys_pool.sh $ref $sampleName $rootDir
     elif [[ $sampleName =~ $(echo ^\($(paste -sd'|' $indList)\)$) ]]; then
-      sbatch $scriptDir/run_minys_pool.sh $ref $sampleName $rootDir
+      sbatch $scriptDir/run_minys_ind.sh $ref $sampleName $rootDir
 
         echo nothing done
     else
